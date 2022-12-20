@@ -1,0 +1,48 @@
+version: '3.9'
+
+services:
+  web:
+    container_name: web
+    build:
+      context: .
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - 8000:8000
+    command: npm run start
+    depends_on:
+      - db
+    restart: always
+
+  db:
+    container_name: db
+    image: postgres:15-alpine
+    env_file:
+      - .env
+    environment:
+      #PG_DATA: /var/lib/postgresql/data
+      - POSTGRES_USER=${TYPEORM_USERNAME}
+      - POSTGRES_PASSWORD=${TYPEORM_PASSWORD}
+      - POSTGRES_DB=${TYPEORM_DATABASE}
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+  nginx:
+    build: ./nginx
+    container_name: nginx
+    restart: on-failure
+    ports:
+      - 80:80
+    volumes:
+      - ./static:/static
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
