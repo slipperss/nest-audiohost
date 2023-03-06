@@ -1,8 +1,12 @@
 import {HttpException, HttpStatus, Injectable} from '@nestjs/common';
 import {JwtService} from "@nestjs/jwt";
-import {UsersService} from "../users/users.service";
-import * as SendGrid from "@sendgrid/mail";
 import {ConfigService} from "@nestjs/config";
+
+import {InjectQueue} from "@nestjs/bull";
+import { Queue } from "bull"
+
+import {UsersService} from "../users/users.service";
+
 
 @Injectable()
 export class EmailConfirmationService {
@@ -11,8 +15,8 @@ export class EmailConfirmationService {
         private jwtService: JwtService,
         private userService: UsersService,
         private configService: ConfigService,
-    )
-    { SendGrid.setApiKey(configService.get("SENDGRID_API_KEY")) }
+        @InjectQueue("mail") private mailQueue: Queue,
+    ) {}
 
     async checkEmailVerificationToken(token: string) {
         try {
@@ -38,16 +42,18 @@ export class EmailConfirmationService {
         try {
             const payload = {email: email, id: id}
             const confirmationToken = this.jwtService.sign(payload)
-            const transport = await SendGrid.send({
+
+            const mailJobData = {
                 to: email,
                 subject: 'Email Verification',
                 from: process.env.EMAILS_FROM_EMAIL,
                 html: `
                 <h2>Hi! ${username} Thanks for choosing us, please click on the link below to verify your account</h2>
-                <a href=${process.env.EMAIL_CONFIRMATION_URL}/${confirmationToken}><h2>Verify Account</h2></a>
-                `
-            });
-            return transport;
+                <a href=${process.env.EMAIL_CONFIRMATION_URL}/${confirmationToken}><h2>Verify Account</h2></a>`
+            }
+
+            return await this.mailQueue.add(mailJobData, {})
+
         } catch (e) {
             throw new HttpException("Something went wrong while sending the email", HttpStatus.INTERNAL_SERVER_ERROR)
         }

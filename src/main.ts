@@ -8,7 +8,7 @@ import {ValidationPipe} from "./pipes/validation.pipe";
 
 async function bootstrap() {
   const PORT = process.env.PORT || 8000;
-  const app = await NestFactory.create(AppModule)//, {logger: false});
+  const app = await NestFactory.create(AppModule)
   const config = new DocumentBuilder()
       .setTitle("AMAZING PROJECT")
       .setVersion("1.0.0")

@@ -16,8 +16,6 @@ import {CheckObjOwnerOrAdmin} from "../permissions/obj-owner-or-admin";
 import {UpdateTrackDto} from "./dto/update-track.dto";
 
 
-
-
 @Injectable()
 export class TracksService {
 
@@ -54,9 +52,9 @@ export class TracksService {
         throw new HttpException("Music file not provided", HttpStatus.BAD_REQUEST)
     }
 
-    async getAll(offset: number, limit: number, user: User) {
+    async getAll(offset: number, limit: number = 10, user: User) {
         try {
-            const result = []
+                const result = []
             const tracks = await this.tracksRepository.find({
                 skip: offset,
                 take: limit,
@@ -64,20 +62,14 @@ export class TracksService {
                 order: {createdAt: "DESC"},
             })
 
-            tracks.forEach(track => {
+            tracks.length ? tracks.forEach(track => {
                 result.push({
-                    id: track.id,
-                    title: track.title,
-                    image: track.image,
-                    file: track.file,
-                    createdAt: track.createdAt,
-                    updatedAt: track.updatedAt,
-                    authorId: track.author.id,
+                    ...track,
                     likes: track.usersLiked.length,
                     listenings: track.usersListened.length,
                     isLikedByUser: user.likedTracks.some(likedTrack => likedTrack.id === track.id)
                 })
-            })
+            }) : []
 
             return [{count: result.length}, result]
         } catch (e) {
@@ -98,13 +90,7 @@ export class TracksService {
         if(!track) throw new HttpException("Not Found", HttpStatus.NOT_FOUND)
 
         return {
-            id: track.id,
-            title: track.title,
-            image: track.image,
-            file: track.file,
-            createdAt: track.createdAt,
-            updatedAt: track.updatedAt,
-            author: track.author,
+            ...track,
             likes: track.usersLiked.length,
             listenings: track.usersListened.length,
             isLikedByUser: req_user.likedTracks.some(value => value.id === track.id)
@@ -112,13 +98,13 @@ export class TracksService {
     }
 
     async updateTrackById(id: number, dto: UpdateTrackDto, req_user: User) {
-        const track = await this.tracksRepository.findOneBy({id: id})
+        const track = await this.getOne({where: {id: id}, relations: {author: true}})
 
         if(!track) {
             throw new HttpException("Not Found", HttpStatus.NOT_FOUND)
         }
 
-        if(!CheckObjOwnerOrAdmin(track.id, req_user)) {
+        if(!CheckObjOwnerOrAdmin(track.author.id, req_user)) {
             throw new HttpException("Forbidden", HttpStatus.FORBIDDEN)
         }
 
@@ -141,13 +127,13 @@ export class TracksService {
         image_file: Express.Multer.File,
         req_user: User
     ): Promise<Track> {
-        const track = await this.getOne({where: {id: track_id}})
+        const track = await this.getOne({where: {id: track_id}, relations: {author: true}})
 
         if (!track) {
             throw new HttpException("Track Not Found", HttpStatus.NOT_FOUND)
         }
 
-        if(!CheckObjOwnerOrAdmin(track.id, req_user)) {
+        if(!CheckObjOwnerOrAdmin(track.author.id, req_user)) {
             throw new HttpException("Forbidden", HttpStatus.FORBIDDEN)
         }
 
@@ -164,10 +150,10 @@ export class TracksService {
     }
 
     async deleteTrackById(id: number, req_user: User) {
-        const track = await this.getOne({where: {id: id}})
+        const track = await this.getOne({where: {id: id}, relations: {author: true}})
         if(!track) throw new HttpException("Not Found", HttpStatus.NOT_FOUND)
 
-        if(!CheckObjOwnerOrAdmin(track.id, req_user)) {
+        if(!CheckObjOwnerOrAdmin(track.author.id, req_user)) {
             throw new HttpException("Forbidden", HttpStatus.FORBIDDEN)
         }
 
@@ -204,8 +190,6 @@ export class TracksService {
             user.likedTracks.push(track)
             await this.tracksRepository.manager.save(user)
         }
-
-        return {result: true}
     }
 
     async unlikeTrack(id: number, user: User) {
@@ -223,8 +207,6 @@ export class TracksService {
             user.likedTracks = user.likedTracks.filter(value => value.id !== track.id)
             await this.tracksRepository.manager.save(user)
         }
-
-        return {result: true}
     }
 
 
@@ -239,8 +221,6 @@ export class TracksService {
             user.listenedTracks.push(track)
             await this.tracksRepository.manager.save(user)
         }
-
-        return {result: true}
     }
 
 }

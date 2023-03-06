@@ -26,14 +26,24 @@ export class PlaylistsService {
         return await this.playlistRepository.save(playlist)
     }
 
-    async getAll(offset: number, limit: number) {
+    async getAll(offset: number, limit: number = 10, user: User) {
+        const result = []
         const playlists = await this.playlistRepository.find({
             skip: offset,
             take: limit,
             where: {private: false},
-            order: {createdAt: "DESC"}
+            order: {createdAt: "DESC"},
+            relations: {tracks: true, owner: true, usersLiked: true}
         })
-        return [{count: playlists.length}, playlists]
+
+        playlists.length ? playlists.forEach(playlist => {
+            result.push({
+                ...playlist,
+                likes: playlist.usersLiked.length,
+                isLikedByUser: user.likedPlaylists.some(likedPlaylist => likedPlaylist.id === playlist.id)
+            })
+        }) : []
+        return [{count: result.length}, result]
     }
 
 
@@ -52,27 +62,42 @@ export class PlaylistsService {
         }
 
         return {
-            id: playlist.id,
-            title: playlist.title,
-            createdAt: playlist.createdAt,
-            updatedAt: playlist.updatedAt,
-            owner: playlist.owner,
+            ...playlist,
             likes: playlist.usersLiked.length,
             isLikedByUser: req_user.likedPlaylists.some(value => value.id === playlist.id)
         }
     }
 
-    async getById(id: number) {
-        return await this.playlistRepository.findOne({where:{id}, relations: {tracks: true, usersLiked: true}})
-    }
+    async getPlaylistTracks(id: number, req_user: User) {
+        const result = []
+        const playlist = await this.getOne({
+            where: {id: id},
+            relations: {tracks: {usersLiked: true}, usersLiked: true}
+        })
 
-    async updatePlaylistById(id: number, dto: UpdatePlaylistDto, req_user: User) {
-        const playlist = await this.playlistRepository.findOneBy({id: id}) // Only for exception in this case
         if(!playlist) {
             throw new HttpException("Not Found", HttpStatus.NOT_FOUND)
         }
 
-        if(!CheckObjOwnerOrAdmin(playlist.id, req_user)) {
+        playlist.tracks ? playlist.tracks.forEach(track => {
+            result.push({
+                ...track,
+                likes: track.usersLiked.length,
+                isLikedByUser: req_user.likedTracks.some(likedTrack => likedTrack.id === track.id)
+            })
+        }) : []
+
+        return [{count: result.length}, result]
+    }
+
+
+    async updatePlaylistById(id: number, dto: UpdatePlaylistDto, req_user: User) {
+        const playlist = await this.getOne({where: {id: id}, relations: {owner: true}}) // Only for exception in this case
+        if(!playlist) {
+            throw new HttpException("Not Found", HttpStatus.NOT_FOUND)
+        }
+
+        if(!CheckObjOwnerOrAdmin(playlist.owner.id, req_user)) {
             throw new HttpException("Forbidden", HttpStatus.FORBIDDEN)
         }
 
@@ -91,12 +116,12 @@ export class PlaylistsService {
     }
 
     async deletePlaylistById(id: number, req_user: User) {
-        const playlist = await this.getOne({where: {id: id}})
+        const playlist = await this.getOne({where: {id: id}, relations: {owner: true}})
         if(!playlist) {
             throw new HttpException("Playlist was not found", HttpStatus.NOT_FOUND)
         }
 
-        if(!CheckObjOwnerOrAdmin(playlist.id, req_user)) {
+        if(!CheckObjOwnerOrAdmin(playlist.owner.id, req_user)) {
             throw new HttpException("Forbidden", HttpStatus.FORBIDDEN)
         }
 
@@ -192,8 +217,6 @@ export class PlaylistsService {
             user.likedPlaylists.push(playlist)
             await this.playlistRepository.manager.save(user)
         }
-
-        return {result: true}
     }
 
      async unlikePlaylist(id: number, user: User) {
@@ -212,8 +235,6 @@ export class PlaylistsService {
             user.likedPlaylists = user.likedPlaylists.filter(value => value.id !== playlist.id)
             await this.playlistRepository.manager.save(user)
         }
-
-        return {result: true}
     }
 
 }

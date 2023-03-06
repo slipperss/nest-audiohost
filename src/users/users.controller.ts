@@ -9,7 +9,7 @@ import {
     Put,
     Delete,
     Param,
-    UploadedFile, UseInterceptors, HttpCode, HttpException, HttpStatus, UploadedFiles
+    UploadedFile, UseInterceptors, HttpCode, HttpException, HttpStatus, ClassSerializerInterceptor, SerializeOptions
 } from '@nestjs/common';
 import {
     ApiBearerAuth,
@@ -31,6 +31,8 @@ import {UpdateUserDto} from "./dto/update-user.dto";
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import RoleGuard from "../auth/guards/roles.guard";
 import {filesFilter} from "../files/filesFilter";
+import {UserMeOutDto} from "./dto/user-me-out.dto";
+import {UserByIdOutDto} from "./dto/user-by-id-out.dto";
 
 @ApiTags("users")
 @Controller("api/users/")
@@ -39,13 +41,15 @@ export class UsersController {
     constructor(private usersService: UsersService) {}
 
     @ApiOperation({summary: "Get Request User Info"})
-    @ApiResponse({status: 200, type: User})
+    @ApiResponse({status: 200, type: UserMeOutDto})
     @ApiBearerAuth()
+    @UseInterceptors(ClassSerializerInterceptor)
+    @SerializeOptions({type: UserMeOutDto})
     @UseGuards(RoleGuard(["user"]))
     @UseGuards(JwtAuthGuard)
     @Get("me")
     async getUserMe(@Request() req){
-        return this.usersService.getUserMe(req.user)
+        return new UserMeOutDto(req.user)
     }
 
     @ApiOperation({summary: "Get All Users"})
@@ -61,8 +65,10 @@ export class UsersController {
     }
 
     @ApiOperation({summary: "Get User By Id"})
-    @ApiResponse({status: 200, type: User})
+    @ApiResponse({status: 200, type: UserByIdOutDto})
     @ApiParam({name: "id", type: Number, required: true, example: 1, description: "User Id"})
+    @UseInterceptors(ClassSerializerInterceptor)
+    @SerializeOptions({type: UserByIdOutDto})
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get(":id")
@@ -74,6 +80,8 @@ export class UsersController {
     @ApiOperation({summary: "Update User"})
     @ApiResponse({status: 200, type: User})
     @ApiBearerAuth()
+    @UseInterceptors(ClassSerializerInterceptor)
+    @SerializeOptions({type: UserMeOutDto})
     @UseGuards(JwtAuthGuard)
     @Put()
     async update(@Body() dto: UpdateUserDto, @Request() req){
@@ -104,6 +112,8 @@ export class UsersController {
           nullable: false
         }
     })
+    @UseInterceptors(ClassSerializerInterceptor)
+    @SerializeOptions({type: UserMeOutDto})
     @UseGuards(JwtAuthGuard)
     @UseInterceptors(FileInterceptor("image", {fileFilter: filesFilter}))
     @Post("avatar")
@@ -171,7 +181,8 @@ export class UsersController {
     @UseGuards(JwtAuthGuard)
     @Post(":id/follow")
     async followUser(@Param("id") id, @Request() req){
-        return await this.usersService.followUser(id, req.user)
+        await this.usersService.followUser(id, req.user)
+        return {result: true}
     }
 
     @ApiOperation({summary: "Unfollow User"})
@@ -181,7 +192,8 @@ export class UsersController {
     @UseGuards(JwtAuthGuard)
     @Post(":id/unfollow")
     async unfollowUser(@Param("id") id, @Request() req){
-        return await this.usersService.unfollowUser(id, req.user)
+        await this.usersService.unfollowUser(id, req.user)
+        return {result: true}
     }
 
 }

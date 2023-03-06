@@ -4,6 +4,7 @@ import {Entity, Column, PrimaryGeneratedColumn} from 'typeorm';
 
 @Entity("roles")
 export class Role {
+
   @ApiProperty({example: "1", description: "Unique Identifier"})
   @PrimaryGeneratedColumn()
   id: number;

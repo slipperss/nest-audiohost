@@ -13,8 +13,6 @@ import {FilesService} from "../files/files.service";
 import {FindOneOptions} from "typeorm/find-options/FindOneOptions";
 import {FindOptionsWhere} from "typeorm/find-options/FindOptionsWhere";
 import {QueryDeepPartialEntity} from "typeorm/query-builder/QueryPartialEntity";
-import {UpdateUserDto} from "./dto/update-user.dto";
-import {CheckObjOwnerOrAdmin} from "../permissions/obj-owner-or-admin";
 
 @Injectable()
 export class UsersService {
@@ -93,37 +91,12 @@ export class UsersService {
         return {result: true}
     }
 
-    getUserMe(user: User) {
-        return {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-            avatar: user.avatar,
-            createdAt: user.createdAt,
-            last_activity: user.last_activity,
-            followers: user.followers.length,
-            tracks: user.tracks,
-            albums: user.albums
-        }
-    }
-
     async getUserById(id: number, req_user: User) {
         const user = await this.getOne({where: {id: id}, relations: {followers: true, albums: true, tracks: true}})
 
         if(!user) throw new HttpException("Not Found", HttpStatus.NOT_FOUND)
 
-        return {
-            id: user.id,
-            username: user.username,
-            avatar: user.avatar,
-            last_activity: user.last_activity,
-            createdAt: user.createdAt,
-            followers: user.followers.length,
-            albums: user.albums,
-            tracks: user.tracks,
-            isFollowedByUser: user.followers.some(value => value.id === req_user.id)
-        }
-
+        return {...user, isFollowedByUser: user.followers.some(value => value.id === req_user.id)}
     }
 
     async getOne(options: FindOneOptions<User>) {
@@ -169,8 +142,6 @@ export class UsersService {
             user.followers.push(follower)
             await this.usersRepository.save(user)
         }
-
-        return {result: true}
     }
 
      async unfollowUser(id: number, follower: User) {
@@ -187,7 +158,6 @@ export class UsersService {
             user.followers = user.followers.filter(value => value.id !== follower.id)
             await this.usersRepository.save(user)
         }
-        return {result: true}
     }
 
 

@@ -17,6 +17,10 @@ import {Album} from "../albums/albums.entity";
 @Entity("users")
 export class User {
 
+  constructor(partial: Partial<User>) {
+    Object.assign(this, partial);
+  }
+
   @ApiProperty({example: "1", description: "Unique Identifier"})
   @PrimaryGeneratedColumn()
   id: number;

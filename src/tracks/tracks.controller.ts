@@ -1,9 +1,9 @@
 import {
-    Body,
+    Body, ClassSerializerInterceptor,
     Controller, Delete, Get,
     HttpException, HttpStatus, Param,
     Post, Put, Query,
-    Request, UploadedFile,
+    Request, SerializeOptions, UploadedFile,
     UploadedFiles,
     UseGuards,
     UseInterceptors
@@ -24,8 +24,8 @@ import {CreateTrackDto} from "./dto/create-track.dto";
 import {TracksService} from "./tracks.service";
 import {filesFilter} from "../files/filesFilter";
 import {JwtAuthGuard} from "../auth/guards/jwt-auth.guard";
-import {Track} from "./tracks.entity";
 import {UpdateTrackDto} from "./dto/update-track.dto";
+import {TrackOutDto} from "./dto/track-out.dto";
 
 @ApiTags("tracks")
 @Controller('api/tracks/')
@@ -34,10 +34,12 @@ export class TracksController {
     constructor(private tracksService: TracksService) {}
 
     @ApiOperation({summary: "Get All Tracks"})
-    @ApiResponse({status: 200, type: [Track]})
+    @ApiResponse({status: 200, type: [TrackOutDto]})
     @ApiQuery({name: "offset", required: false, type: Number, description: "Offset for records"})
     @ApiQuery({name: "limit", required: false, type: Number, description: "Limit number of records"})
     @ApiBearerAuth()
+    @UseInterceptors(ClassSerializerInterceptor)
+    @SerializeOptions({type: TrackOutDto})
     @UseGuards(JwtAuthGuard)
     @Get()
     async getAllTracks(
@@ -49,8 +51,10 @@ export class TracksController {
     }
 
     @ApiOperation({summary: "Get My Tracks"})
-    @ApiResponse({status: 200, type: Track})
+    @ApiResponse({status: 200, type: TrackOutDto})
     @ApiBearerAuth()
+    @UseInterceptors(ClassSerializerInterceptor)
+    @SerializeOptions({type: TrackOutDto})
     @UseGuards(JwtAuthGuard)
     @Get("my")
     async getMyTracks(@Request() req) {
@@ -58,9 +62,11 @@ export class TracksController {
     }
 
     @ApiOperation({summary: "Get Track By Id"})
-    @ApiResponse({status: 200, type: Track})
+    @ApiResponse({status: 200, type: TrackOutDto})
     @ApiParam({name: "id", type: Number, required: true, example: 1, description: "Track Id"})
     @ApiBearerAuth()
+    @UseInterceptors(ClassSerializerInterceptor)
+    @SerializeOptions({type: TrackOutDto})
     @UseGuards(JwtAuthGuard)
     @Get(":id")
     async getTrack(@Param("id") id: number, @Request() req) {
@@ -68,9 +74,11 @@ export class TracksController {
     }
 
     @ApiOperation({summary: "Create Track"})
-    @ApiResponse({status: 201, type: Track})
+    @ApiResponse({status: 201, type: TrackOutDto})
     @ApiBearerAuth()
     @ApiConsumes('multipart/form-data')
+    @UseInterceptors(ClassSerializerInterceptor)
+    @SerializeOptions({type: TrackOutDto})
     @UseGuards(JwtAuthGuard)
     @UseInterceptors(FileFieldsInterceptor([
             {name: "music", maxCount: 1},
@@ -91,7 +99,7 @@ export class TracksController {
     }
 
     @ApiOperation({summary: "Upload Track Avatar"})
-    @ApiResponse({status: 200, type: Track})
+    @ApiResponse({status: 200, type: TrackOutDto})
     @ApiBearerAuth()
     @ApiConsumes('multipart/form-data')
     @ApiBody({
@@ -103,6 +111,8 @@ export class TracksController {
         }
     })
     @ApiParam({name: "id", type: Number, required: true, example: 1, description: "Track Id"})
+    @UseInterceptors(ClassSerializerInterceptor)
+    @SerializeOptions({type: TrackOutDto})
     @UseGuards(JwtAuthGuard)
     @UseInterceptors(FileInterceptor("image", {fileFilter: filesFilter}))
     @Post(":id/avatar")
@@ -118,10 +128,12 @@ export class TracksController {
     }
 
     @ApiOperation({summary: "Update Track"})
-    @ApiResponse({status: 200, type: Track})
+    @ApiResponse({status: 200, type: TrackOutDto})
     @ApiBearerAuth()
     @ApiBody({type: UpdateTrackDto, required: true, description: "Options To Update Track"})
     @ApiParam({name: "id", type: Number, required: true, example: 1, description: "Track Id"})
+    @UseInterceptors(ClassSerializerInterceptor)
+    @SerializeOptions({type: TrackOutDto})
     @UseGuards(JwtAuthGuard)
     @Put(":id")
     async updateTrack(
@@ -129,7 +141,6 @@ export class TracksController {
         @Body() dto: UpdateTrackDto,
         @Request() req
     ) {
-        console.log(req.user.id)
        return await this.tracksService.updateTrackById(id, dto, req.user)
     }
 
@@ -156,7 +167,8 @@ export class TracksController {
         @Param("id") id: number,
         @Request() req
     ) {
-       return await this.tracksService.likeTrack(id, req.user)
+       await this.tracksService.likeTrack(id, req.user)
+       return {result: true}
     }
 
     @ApiOperation({summary: "Unlike Track"})
@@ -169,7 +181,8 @@ export class TracksController {
         @Param("id") id: number,
         @Request() req
     ) {
-       return await this.tracksService.unlikeTrack(id, req.user)
+       await this.tracksService.unlikeTrack(id, req.user)
+       return {result: true}
     }
 
     @ApiOperation({summary: "Add Track Listening"})
@@ -182,7 +195,8 @@ export class TracksController {
         @Param("id") id: number,
         @Request() req
     ) {
-       return await this.tracksService.addTrackListening(id, req.user)
+       await this.tracksService.addTrackListening(id, req.user)
+       return {result: true}
     }
 
 }

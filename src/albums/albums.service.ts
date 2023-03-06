@@ -27,22 +27,31 @@ export class AlbumsService {
 
     async create(dto: CreateAlbumDto, user: User){
         const album = this.albumRepository.create({...dto, owner: user})
-        await this.albumRepository.save(album)
-        return await this.getAlbumById(album.id, user)
+        return await this.albumRepository.save(album)
     }
 
-    async getAll(offset: number, limit: number) {
+    async getAll(offset: number, limit: number, user: User) {
+        const result = []
         const albums = await this.albumRepository.find({
             skip: offset,
             take: limit,
-            relations: {owner: true},
+            relations: {owner: true, usersLiked: true},
             order: {createdAt: "DESC"}
         })
-        return [{count: albums.length}, albums]
+
+        albums.forEach(album => {
+            result.push({
+                ...album,
+                likes: album.usersLiked.length,
+                isLikedByUser: user.likedAlbums.some(likedAlbum => likedAlbum.id === album.id)
+            })
+        })
+
+        return [{count: result.length}, result]
     }
 
     async getAlbumById(id: number, req_user: User) {
-        const album = await this.albumRepository.findOne({
+        const album = await this.getOne({
             where: {id: id},
             relations: {owner: true, tracks: true, usersLiked: true},
         })
@@ -50,9 +59,7 @@ export class AlbumsService {
             throw new HttpException("Not Found", HttpStatus.NOT_FOUND)
         }
         return {
-            id: album.id,
-            title: album.title,
-            createdAt: album.createdAt,
+            ...album,
             owner: album.owner,
             tracks: album.tracks,
             likes: album.usersLiked.length,
@@ -60,17 +67,39 @@ export class AlbumsService {
         }
     }
 
+    async getAlbumTracks(id: number, user: User) {
+        const result = []
+        const album = await this.getOne({
+            where: {id: id},
+            relations: {tracks: {usersLiked: true}, usersLiked: true}
+        })
+
+        if(!album) {
+            throw new HttpException("Not Found", HttpStatus.NOT_FOUND)
+        }
+
+        album.tracks ? album.tracks.forEach(track => {
+            result.push({
+                ...track,
+                likes: track.usersLiked.length,
+                isLikedByUser: user.likedTracks.some(likedTrack => likedTrack.id === track.id)
+            })
+        }) : []
+
+        return [{count: result.length}, result]
+    }
+
     async getOne(options: FindOneOptions<Album>) {
         return await this.albumRepository.findOne(options)
     }
 
     async updateAlbumById(id: number, dto: UpdateAlbumDto, req_user: User) {
-        const album = await this.albumRepository.findOneBy({id: id}) // Only for exception in this case
+        const album = await this.getOne({where: {id: id}, relations: {owner: true}}) // Only for exception in this case
         if(!album) {
             throw new HttpException("Not Found", HttpStatus.NOT_FOUND)
         }
 
-        if(!CheckObjOwnerOrAdmin(album.id, req_user)) {
+        if(!CheckObjOwnerOrAdmin(album.owner.id, req_user)) {
             throw new HttpException("Forbidden", HttpStatus.FORBIDDEN)
         }
 
@@ -88,10 +117,10 @@ export class AlbumsService {
     }
 
     async deleteAlbumById(id: number, req_user: User) {
-        const album = await this.getOne({where: {id: id}})
+        const album = await this.getOne({where: {id: id}, relations: {owner: true}})
         if(!album) throw new HttpException("Not Found", HttpStatus.NOT_FOUND)
 
-        if(!CheckObjOwnerOrAdmin(album.id, req_user)) {
+        if(!CheckObjOwnerOrAdmin(album.owner.id, req_user)) {
             throw new HttpException("Forbidden", HttpStatus.FORBIDDEN)
         }
 
@@ -163,8 +192,6 @@ export class AlbumsService {
 
         newPlaylist.tracks = album.tracks
 
-        console.log(newPlaylist)
-
         await this.albumRepository.manager.save(newPlaylist)
 
         return newPlaylist
@@ -186,8 +213,6 @@ export class AlbumsService {
             user.likedAlbums.push(album)
             await this.albumRepository.manager.save(user)
         }
-
-        return {result: true}
     }
 
      async unlikeAlbum(id: number, user: User) {
@@ -206,8 +231,6 @@ export class AlbumsService {
             user.likedAlbums = user.likedAlbums.filter(value => value.id !== album.id)
             await this.albumRepository.manager.save(user)
         }
-
-        return {result: true}
     }
 
 

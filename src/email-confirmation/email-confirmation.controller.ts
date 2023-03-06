@@ -1,7 +1,8 @@
-import {Controller, Get, HttpCode, Param, Request} from '@nestjs/common';
-import {ApiOperation, ApiParam, ApiResponse, ApiTags} from "@nestjs/swagger";
+import {Controller, Get, Param, Request, UseGuards} from '@nestjs/common';
+import {ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags} from "@nestjs/swagger";
 
 import {EmailConfirmationService} from "./email-confirmation.service";
+import {JwtAuthGuard} from "../auth/guards/jwt-auth.guard";
 
 @ApiTags("email-verification")
 @Controller('api')
@@ -19,9 +20,12 @@ export class EmailConfirmationController {
 
     @ApiOperation({summary: "Send Verification Email Token "})
     @ApiResponse({status: 200})
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
     @Get("/send-email-verification/")
-    sendEmailVerificationLink(@Request() req){
+    async sendEmailVerificationLink(@Request() req){
         const user = req.user
-        return this.emailConfirmationService.sendConfirmationEmail(user.id, user.email, user.username)
+        await this.emailConfirmationService.sendConfirmationEmail(user.id, user.email, user.username)
+        return {result: `Verification email has been sent to ${user.email}`}
     }
 }

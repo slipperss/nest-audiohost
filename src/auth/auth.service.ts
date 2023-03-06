@@ -28,7 +28,7 @@ export class AuthService {
         userDto.password = await bcrypt.hash(userDto.password, 5)
         const user = await this.userService.createUser(userDto)
 
-        return await this.emailConfirmationService.sendConfirmationEmail(user.id, user.email, user.username);
+        await this.emailConfirmationService.sendConfirmationEmail(user.id, user.email, user.username);
     }
 
     async validateUser(email: string, password: string): Promise<User> {

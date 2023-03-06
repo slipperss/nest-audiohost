@@ -1,10 +1,13 @@
 import {Module} from '@nestjs/common';
+import {ConfigModule, ConfigService} from "@nestjs/config";
+import {JwtModule} from "@nestjs/jwt";
+import {BullModule} from "@nestjs/bull";
 
 import { EmailConfirmationService } from './email-confirmation.service';
 import { EmailConfirmationController } from './email-confirmation.controller';
-import {UsersModule} from "../users/users.module";
-import {JwtModule} from "@nestjs/jwt";
-import {ConfigModule, ConfigService} from "@nestjs/config";
+import { UsersModule } from "../users/users.module";
+import { SendEmailConsumer } from "./send-email.consumer";
+import { SENDEMAIL_QUEUE } from "../constants";
 
 @Module({
   imports: [
@@ -21,8 +24,9 @@ import {ConfigModule, ConfigService} from "@nestjs/config";
           }
         }),
     }),
+    BullModule.registerQueueAsync({name: SENDEMAIL_QUEUE}),
   ],
-  providers: [EmailConfirmationService],
+  providers: [EmailConfirmationService, SendEmailConsumer],
   controllers: [EmailConfirmationController],
   exports: [EmailConfirmationService]
 })
