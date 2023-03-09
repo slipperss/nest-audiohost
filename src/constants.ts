@@ -1,1 +1,1 @@
-export const SENDEMAIL_QUEUE = "mail";
+export const SENDEMAIL_QUEUE = 'mail'

@@ -1,32 +1,32 @@
-import { Exclude } from "class-transformer";
+import { Exclude } from 'class-transformer'
 
-import { User } from "../users.entity";
+import { User } from '../users.entity'
 
 export class UserMeOutDto extends User {
-  @Exclude()
-  banned;
+	@Exclude()
+	banned
 
-  @Exclude()
-  banReason;
+	@Exclude()
+	banReason
 
-  @Exclude()
-  verified;
+	@Exclude()
+	verified
 
-  @Exclude()
-  likedPlaylists;
+	@Exclude()
+	likedPlaylists
 
-  @Exclude()
-  likedTracks;
+	@Exclude()
+	likedTracks
 
-  @Exclude()
-  likedAlbums;
+	@Exclude()
+	likedAlbums
 
-  @Exclude()
-  listenedTracks;
+	@Exclude()
+	listenedTracks
 
-  @Exclude()
-  isRegisteredWithGoogle;
+	@Exclude()
+	isRegisteredWithGoogle
 
-  @Exclude()
-  roles;
+	@Exclude()
+	roles
 }

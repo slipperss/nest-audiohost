@@ -1,19 +1,19 @@
-import { Exclude, Transform } from "class-transformer";
+import { Exclude, Transform } from 'class-transformer'
 
-import { User } from "../../users/users.entity";
-import { Album } from "../albums.entity";
+import { User } from '../../users/users.entity'
+import { Album } from '../albums.entity'
 
 export class AlbumOutDto extends Album {
-  @Exclude()
-  usersLiked;
+	@Exclude()
+	usersLiked
 
-  @Exclude()
-  tracks;
+	@Exclude()
+	tracks
 
-  @Transform(({ obj }) => obj.id)
-  owner: User;
+	@Transform(({ obj }) => obj.id)
+	owner: User
 
-  likes?: number;
+	likes?: number
 
-  isLikedByUser?: boolean;
+	isLikedByUser?: boolean
 }
