@@ -1,6 +1,6 @@
-import {ApiProperty} from "@nestjs/swagger";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class TokenOutDto {
-    @ApiProperty({example: "token", description: "Access Token"})
-    readonly access_token: string
+  @ApiProperty({ example: "token", description: "Access Token" })
+  readonly access_token: string;
 }

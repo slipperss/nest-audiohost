@@ -1,9 +1,14 @@
-import {HttpException, HttpStatus, Injectable, UnauthorizedException} from '@nestjs/common';
-import { UsersService } from '../users/users.service';
-import { ConfigService } from '@nestjs/config';
-import { google, Auth } from 'googleapis';
-import {AuthService} from "../auth/auth.service";
-import {User} from "../users/users.entity";
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common";
+import { UsersService } from "../users/users.service";
+import { ConfigService } from "@nestjs/config";
+import { google, Auth } from "googleapis";
+import { AuthService } from "../auth/auth.service";
+import { User } from "../users/users.entity";
 
 @Injectable()
 export class GoogleAuthService {
@@ -11,16 +16,16 @@ export class GoogleAuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
-    private readonly authService: AuthService,
+    private readonly authService: AuthService
   ) {
-    const clientID = this.configService.get('GOOGLE_AUTH_CLIENT_ID');
-    const clientSecret = this.configService.get('GOOGLE_AUTH_CLIENT_SECRET');
+    const clientID = this.configService.get("GOOGLE_AUTH_CLIENT_ID");
+    const clientSecret = this.configService.get("GOOGLE_AUTH_CLIENT_SECRET");
 
     this.oauthClient = new google.auth.OAuth2(clientID, clientSecret);
   }
 
   async getUserData(token: string) {
-    const userInfoClient = google.oauth2('v2').userinfo;
+    const userInfoClient = google.oauth2("v2").userinfo;
 
     this.oauthClient.setCredentials({
       access_token: token,
@@ -35,15 +40,15 @@ export class GoogleAuthService {
 
   handleRegisteredUser(user: User) {
     if (!user.isRegisteredWithGoogle) {
-      throw new UnauthorizedException()
+      throw new UnauthorizedException();
     }
     const accessTokenCookie = this.authService.getCookieWithJwtAccessToken({
-        id: user.id,
-        email: user.email,
-        username: user.username
-    })
+      id: user.id,
+      email: user.email,
+      username: user.username,
+    });
 
-    return accessTokenCookie
+    return accessTokenCookie;
   }
 
   async registerUser(token: string, email: string) {
@@ -52,18 +57,20 @@ export class GoogleAuthService {
 
     const user = await this.usersService.createWithGoogle(email, username);
     if (!user) {
-      throw new HttpException('Bad Request', HttpStatus.BAD_REQUEST)
+      throw new HttpException("Bad Request", HttpStatus.BAD_REQUEST);
     }
 
     return this.handleRegisteredUser(user);
   }
 
-
   async authenticate(token: string) {
     const tokenInfo = await this.oauthClient.getTokenInfo(token);
     const email = tokenInfo.email;
 
-    const user = await this.usersService.getOne({where: {email: email}, select: {id: true, isRegisteredWithGoogle: true}});
+    const user = await this.usersService.getOne({
+      where: { email: email },
+      select: { id: true, isRegisteredWithGoogle: true },
+    });
 
     if (!user) {
       return this.registerUser(token, email);

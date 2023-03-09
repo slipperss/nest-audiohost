@@ -1,21 +1,20 @@
-import {Track} from "../tracks.entity";
-import {Exclude, Transform} from "class-transformer";
-import {User} from "../../users/users.entity";
+import { Track } from "../tracks.entity";
+import { Exclude, Transform } from "class-transformer";
+import { User } from "../../users/users.entity";
 
 export class TrackOutDto extends Track {
+  @Exclude()
+  usersLiked;
 
-    @Exclude()
-    usersLiked
+  @Exclude()
+  usersListened;
 
-    @Exclude()
-    usersListened
+  @Transform(({ obj }) => obj.id)
+  author: User;
 
-    @Transform(({obj}) => obj.id)
-    author : User
+  likes?: number;
 
-    likes ?: number
+  listenings?: number;
 
-    listenings ?: number
-
-    isLikedByUser ?: boolean
+  isLikedByUser?: boolean;
 }
